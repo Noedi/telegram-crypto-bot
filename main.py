@@ -70,5 +70,4 @@ if __name__ == "__main__":
 
     print("CRYPTO PRICE BOT IS RUNNING – READY TO SELL!")
       app.run_polling(
-        allowed_updates=Update.ALL_TYPES
-    )
+        allowed_updates=Update.ALL_TYPES )
