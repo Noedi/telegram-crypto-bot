@@ -3,16 +3,13 @@ import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 
-# ───── CONFIG ─────
 COIN_IDS = {
     "bitcoin": "bitcoin", "btc": "bitcoin",
     "ethereum": "ethereum", "eth": "ethereum",
     "solana": "solana", "sol": "solana",
     "ton": "the-open-network", "toncoin": "the-open-network",
     "dogecoin": "dogecoin", "doge": "dogecoin",
-    "binancecoin": "binancecoin", "bnb": "binancecoin",
-    "cardano": "cardano", "ada": "cardano",
-    "ripple": "ripple", "xrp": "ripple",
+    "bnb": "binancecoin", "ada": "cardano", "xrp": "ripple"
 }
 
 def get_price(coin_id):
@@ -23,51 +20,23 @@ def get_price(coin_id):
     except:
         return None
 
-def fear_greed():
-    try:
-        r = requests.get("https://api.alternative.me/fng/?limit=1")
-        data = r.json()["data"][0]
-        return f"{data['value']} → {data['value_classification']}"
-    except:
-        return "N/A"
-
-# ───── HANDLERS ─────
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Crypto Price Bot LIVE\n\n"
-        "Just type any coin:\n"
-        "btc | eth | sol | ton | doge | ada | xrp\n\n"
-        "More coins coming soon!"
-    )
+    await update.message.reply_text("Crypto Bot LIVE\nType any coin: btc eth sol ton doge")
 
 async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip().lower()
     coin_id = COIN_IDS.get(text, text.replace(" ", "-"))
     data = get_price(coin_id)
-
     if not data:
-        await update.message.reply_text("Coin not found")
+        await update.message.reply_text("Not found")
         return
+    p = data["usd"]
+    c = data.get("usd_24h_change", 0)
+    await update.message.reply_text(f"{text.upper()}\n${p:,.2f}\n24h: {'Up' if c>0 else 'Down'} {abs(c):.2f}%")
 
-    price = data["usd"]
-    change = data.get("usd_24h_change", 0)
-
-    msg = (
-        f"{text.upper()}\n"
-        f"Price: ${price:,.2f}\n"
-        f"24h: {'Up' if change > 0 else 'Down'} {abs(change):.2f}%\n"
-        f"Fear & Greed: {fear_greed()}"
-    )
-    await update.message.reply_text(msg)
-
-# ───── MAIN ─────
 if __name__ == "__main__":
-    token = os.environ["BOT_TOKEN"]  # Railway reads this automatically
-    app = ApplicationBuilder().token(token).build()
-
+    app = ApplicationBuilder().token(os.environ["BOT_TOKEN"]).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, price))
-
-    print("CRYPTO PRICE BOT IS RUNNING – READY TO SELL!")
-      app.run_polling(
-        allowed_updates=Update.ALL_TYPES )
+    print("BOT IS RUNNING!")
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
