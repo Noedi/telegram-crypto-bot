@@ -35,8 +35,10 @@ async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"{text.upper()}\n${p:,.2f}\n24h: {'Up' if c>0 else 'Down'} {abs(c):.2f}%")
 
 if __name__ == "__main__":
+   if __name__ == "__main__":
     app = ApplicationBuilder().token(os.environ["BOT_TOKEN"]).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, price))
-    print("BOT IS RUNNING!")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    print("CRYPTO BOT IS NOW RUNNING – GO MAKE MONEY!")
+    app.run_polling()
+    
