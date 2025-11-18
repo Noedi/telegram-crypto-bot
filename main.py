@@ -1,4 +1,72 @@
-) python def get_price_data(coin_id): url = fhttps://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd&include_24hr_change=true&include_7d_change=true try: r = requests.get(url, timeout=10) return r.json().get(coin_id) except: return None def get_chart(coin_id): return fhttps://quickchart.io/chart?c={{type:'line',data:{{labels:['7d','6d','5d','4d','3d','2d','1d','Now'],datasets:[{{label:'{coin_id.upper()} USD',data:[0],fill:false,borderColor:'rgb(0,255,0)'}}]}}}}&width=800&height=400 def fear_greed(): try: r = requests.ge data = r.json()[0] return f{data['value']} → {data['value_classification']} except: return N/A COIN_IDS = { bitcoin: bitcoin, btc: bitcoin, ethereum: ethereum, eth: ethereum, solana: solana, sol: solana, ton: the-open-network, toncoin: the-open-network, bnb: binancecoin, dogecoin: dogecoin, doge: dogecoin
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               python async def price_handler(update: Update, context: ContextTypes.DEFAULT_TYPE): text = update.message.text.strip() if not text: return coin = text.lower() coin_id = COIN_IDS.get(coin, coin.replace( , -)) data = get_price_data(coin_id) if not data: await update.message.reply_text(Coin not found) return price = data change24 = data.get(usd_24h_change, 0) change7d = data.get(usd_7d_change, 0) msg = f{coin.upper()}\n msg += fPrice: ${price:,.2f}\n msg += f24h: {'Up' if change24>0 else 'Down'} {abs(change24):.2f}%\n msg += f7d: {'Up' if change7d>0 else 'Down'} {abs(change7d):.2f}%\n msg += fFear & Greed: {fear_greed()}\n if is_premium(update.effective_user.id): chart = get_chart(coin_id) await update.message.reply_photo(chart, caption=msg) else: await update.message.reply_text(msg + \nUpgrade to Premium for charts)
-msg += f7d: {'Up' if change7d>0 else 'Down'} {abs(change7d):.2f}%\n msg += fFear & Greed: {fear_greed()}\n if is_premium(update.effective_user.id): chart = get_chart(coin_id) await update.message.reply_photo(chart, caption=msg) else: await update.message.reply_text(msg + \nUpgrade to Premium for charts) async def predict_handler(update: Update, context: ContextTypes.DEFAULT_TYPE): text = update.message.text.strip().lower() coin_id = COIN_IDS.get(text, text.replace( , -)) data = get_price_data(coin_id) if not data: await update.message.reply_text(Error) return score = 0 if data[usd_24h_change] > 8: score += 2 if data[usd_24h_change] < -8: score -= 3 fg = int(requests.ge.json()[0]) if fg < 25: score -= 2 # Extreme Fear → buy if fg > 80: score += 2 # Extreme Greed → sell signal = STRONG BUY if score <= -3 else BUY if score <= -1 else STRONG SELL if score >= 3 else SELL if score >= 1 else HOLD await update.message.reply_text(f{text.upper()} SIGNAL\n\n{signal}\nScore: {score}\nFear & Greed: {fg}\n\nNot financial advice!)
+import os
+import requests
+from telegram import Update
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
+
+# ───── CONFIG ─────
+COIN_IDS = {
+    "bitcoin": "bitcoin", "btc": "bitcoin",
+    "ethereum": "ethereum", "eth": "ethereum",
+    "solana": "solana", "sol": "solana",
+    "ton": "the-open-network", "toncoin": "the-open-network",
+    "dogecoin": "dogecoin", "doge": "dogecoin",
+    "binancecoin": "binancecoin", "bnb": "binancecoin",
+    "cardano": "cardano", "ada": "cardano",
+    "ripple": "ripple", "xrp": "ripple",
+}
+
+def get_price(coin_id):
+    url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd&include_24hr_change=true"
+    try:
+        r = requests.get(url, timeout=10)
+        return r.json().get(coin_id)
+    except:
+        return None
+
+def fear_greed():
+    try:
+        r = requests.get("https://api.alternative.me/fng/?limit=1")
+        data = r.json()["data"][0]
+        return f"{data['value']} → {data['value_classification']}"
+    except:
+        return "N/A"
+
+# ───── HANDLERS ─────
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "Crypto Price Bot LIVE\n\n"
+        "Just type any coin:\n"
+        "btc | eth | sol | ton | doge | ada | xrp\n\n"
+        "More coins coming soon!"
+    )
+
+async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.strip().lower()
+    coin_id = COIN_IDS.get(text, text.replace(" ", "-"))
+    data = get_price(coin_id)
+
+    if not data:
+        await update.message.reply_text("Coin not found")
+        return
+
+    price = data["usd"]
+    change = data.get("usd_24h_change", 0)
+
+    msg = (
+        f"{text.upper()}\n"
+        f"Price: ${price:,.2f}\n"
+        f"24h: {'Up' if change > 0 else 'Down'} {abs(change):.2f}%\n"
+        f"Fear & Greed: {fear_greed()}"
+    )
+    await update.message.reply_text(msg)
+
+# ───── MAIN ─────
+if __name__ == "__main__":
+    token = os.environ["BOT_TOKEN"]  # Railway reads this automatically
+    app = ApplicationBuilder().token(token).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, price))
+
+    print("CRYPTO PRICE BOT IS RUNNING – READY TO SELL!")
+    app.run_polling()
